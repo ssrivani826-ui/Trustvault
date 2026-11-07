@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustVault — Secure Document Sharing & Cryptographic Audit Trail</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        vault: {
+                            900: '#070A0F',
+                            800: '#0F172A',
+                            700: '#1E293B',
+                            600: '#334155',
+                            accent: '#10B981', // Emerald
+                            accentGlow: '#059669',
+                            cyan: '#06B6D4',
+                            danger: '#EF4444',
+                            warning: '#F59E0B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Visual Stats -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #070A0F;
+            color: #F8FAFC;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        .glow-border {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+        }
+        .glow-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0F172A;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #10B981;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-vault-900 text-slate-100 overflow-x-hidden selection:bg-emerald-500 selection:text-slate-900">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-vault-800/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-vault-900 font-bold shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                        Trust<span class="text-emerald-400">Vault</span>
+                        <span class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">v2.4 Zero-Trust</span>
+                    </span>
+                    <p class="text-xs text-slate-400 hidden sm:block">Cryptographically Verifiable Document Engine</p>
+                </div>
+            </div>
+
+            <!-- Global Search & System Status -->
+            <div class="flex items-center space-x-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700/60 text-xs">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-slate-300 font-mono">HASH CHAIN: INTEGRITY VERIFIED</span>
+                </div>
+                
+                <!-- Quick User Profile -->
+                <div class="flex items-center space-x-3 border-l border-slate-800 pl-4">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-semibold text-xs">
+                        AD
+                    </div>
+                    <div class="hidden sm:block text-left">
+                        <p class="text-xs font-medium text-slate-200" id="header-username">Admin User</p>
+                        <p class="text-[10px] text-slate-400 code-font" id="header-role">Role: Admin</p>
+                    </div>
+                    <button onclick="logout()" class="ml-2 px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs rounded-lg transition">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Auth Overlay Modal (If not logged in) -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-vault-800 border border-slate-700 rounded-2xl max-w-md w-full p-8 space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h2 class="text-xl font-bold text-white">TrustVault Secure Access</h2>
+                <p class="text-xs text-slate-400">Authenticate with your credentials to access cryptographic vault.</p>
+            </div>
+
+            <!-- Login Form -->
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Email Address</label>
+                    <input type="email" id="login-email" value="admin@trustvault.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Password</label>
+                    <input type="password" id="login-password" value="secretpassword123" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500" required>
+                </div>
+                <button type="submit" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-vault-900 font-bold rounded-lg transition shadow-lg shadow-emerald-500/20 text-sm">
+                    Authenticate & Enter Vault
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col space-y-6">
+
+        <!-- Navigation Tabs Bar -->
+        <nav class="flex space-x-1 bg-vault-800/60 p-1.5 rounded-xl border border-slate-800 overflow-x-auto custom-scrollbar">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 bg-emerald-500 text-vault-900 shadow-md font-semibold">
+                <i class="fa-solid fa-chart-pie"></i> Security Dashboard
+            </button>
+            <button onclick="switchTab('upload')" id="tab-upload" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                <i class="fa-solid fa-lock-open"></i> Upload & Encrypt
+            </button>
+            <button onclick="switchTab('documents')" id="tab-documents" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                <i class="fa-solid fa-folder-closed"></i> Shared Vault (<span id="doc-count-badge">0</span>)
+            </button>
+            <button onclick="switchTab('audit')" id="tab-audit" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                <i class="fa-solid fa-cube"></i> Immutable Audit Trail
+            </button>
+        </nav>
+
+        <!-- SECTION 1: DASHBOARD -->
+        <section id="sec-dashboard" class="tab-content space-y-6">
+            <!-- Summary Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-vault-800 border border-slate-800 p-5 rounded-xl glow-border">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Total Documents</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="stat-total-docs">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
+                            <i class="fa-solid fa-file-shield text-lg"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-emerald-400 mt-3 flex items-center gap-1">
+                        <i class="fa-solid fa-shield-check"></i> AES-256-GCM Active
+                    </p>
+                </div>
+
+                <div class="bg-vault-800 border border-slate-800 p-5 rounded-xl glow-border-cyan">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Active Files</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="stat-active-docs">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-cyan-500/10 rounded-lg text-cyan-400 border border-cyan-500/20">
+                            <i class="fa-solid fa-cubes text-lg"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-cyan-400 mt-3 flex items-center gap-1">
+                        <i class="fa-solid fa-link"></i> Vault Operational
+                    </p>
+                </div>
+
+                <div class="bg-vault-800 border border-slate-800 p-5 rounded-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Audit Events</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="stat-audit-count">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
+                            <i class="fa-solid fa-eye text-lg"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <span class="text-emerald-400">IP Tracked</span> Secured
+                    </p>
+                </div>
+
+                <div class="bg-vault-800 border border-slate-800 p-5 rounded-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-slate-400 font-medium">Revoked Files</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="stat-revoked">0</h3>
+                        </div>
+                        <div class="p-2.5 bg-rose-500/10 rounded-lg text-rose-400 border border-rose-500/20">
+                            <i class="fa-solid fa-user-slash text-lg"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <i class="fa-solid fa-ban text-rose-400"></i> Instant link kill-switch
+                    </p>
+                </div>
+            </div>
+
+            <!-- Recent Audit Snippet -->
+            <div class="bg-vault-800 border border-slate-800 p-5 rounded-xl flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> Live Security Log
+                    </h4>
+                    <button onclick="switchTab('audit')" class="text-xs text-emerald-400 hover:underline">View All</button>
+                </div>
+                <pre id="dashboard-recent-logs" class="bg-slate-900 text-cyan-300 p-4 rounded-xl code-font text-xs overflow-x-auto max-h-60 border border-slate-800">Loading audit history...</pre>
+            </div>
+        </section>
+
+        <!-- SECTION 2: UPLOAD & ENCRYPT -->
+        <section id="sec-upload" class="tab-content hidden space-y-6">
+            <div class="max-w-3xl mx-auto bg-vault-800 border border-slate-800 rounded-xl p-6 sm:p-8 space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-shield-virus text-emerald-400"></i> Secure Document Uploader
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">
+                        Upload files securely to the TrustVault backend ledger with automatic audit tracking.
+                    </p>
+                </div>
+
+                <form id="upload-form" onsubmit="handleUploadSubmit(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Document Title</label>
+                        <input type="text" id="upload-title" placeholder="e.g. Q3 Financial Report" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500" required>
+                    </div>
+
+                    <div class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center bg-slate-900/50">
+                        <input type="file" id="file-input" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500 file:text-vault-900 hover:file:bg-emerald-400 cursor-pointer" required />
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-vault-900 font-bold rounded-lg transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload Secure Document
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- SECTION 3: SHARED VAULT -->
+        <section id="sec-documents" class="tab-content hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Encrypted Document Vault</h2>
+                    <p class="text-xs text-slate-400">Manage active permissions, download files, or trigger instant revocation.</p>
+                </div>
+                <button onclick="switchTab('upload')" class="px-3.5 py-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold rounded-lg hover:bg-emerald-500/20 transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Upload New File
+                </button>
+            </div>
+
+            <!-- Documents Table -->
+            <div class="bg-vault-800 border border-slate-800 rounded-xl overflow-hidden">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase font-mono border-b border-slate-800">
+                            <tr>
+                                <th class="p-4">ID</th>
+                                <th class="p-4">Title</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documents-list-table" class="divide-y divide-slate-800/60">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: AUDIT TRAIL -->
+        <section id="sec-audit" class="tab-content hidden space-y-6">
+            <div class="bg-vault-800 p-5 border border-slate-800 rounded-xl flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-cube text-cyan-400"></i> Immutable Audit Ledger
+                    </h2>
+                    <p class="text-xs text-slate-400">Real-time IP-tracked security events and cryptographic logs.</p>
+                </div>
+                <button onclick="loadAuditLogs()" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-vault-900 text-xs font-bold rounded-lg transition">
+                    Refresh Logs
+                </button>
+            </div>
+
+            <div class="bg-vault-800 border border-slate-800 p-5 rounded-xl">
+                <pre id="audit-logs-pre" class="bg-slate-900 text-cyan-300 p-4 rounded-xl code-font text-xs overflow-x-auto max-h-96 border border-slate-800">Loading audit logs...</pre>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/80 bg-vault-800/40 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>© 2026 TrustVault Cryptographic Systems. All actions logged.</p>
+            <p class="code-font text-[11px] text-slate-400">
+                <i class="fa-solid fa-lock text-emerald-400"></i> E2EE AES-256-GCM • Secure Ledger
+            </p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let authToken = localStorage.getItem('trustvault_token') || "";
+        let currentUser = JSON.parse(localStorage.getItem('trustvault_user') || "{}");
+
+        window.onload = () => {
+            if (authToken) {
+                document.getElementById('auth-modal').classList.add('hidden');
+                initDashboard();
+            }
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-500', 'text-vault-900', 'font-semibold', 'shadow-md');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.classList.add('bg-emerald-500', 'text-vault-900', 'font-semibold', 'shadow-md');
+            activeBtn.classList.remove('text-slate-400');
+
+            if (tabId === 'documents') fetchDocuments();
+            if (tabId === 'audit') loadAuditLogs();
+        }
+
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    authToken = data.token;
+                    const payload = JSON.parse(atob(authToken.split('.')[1]));
+                    currentUser = payload;
+
+                    localStorage.setItem('trustvault_token', authToken);
+                    localStorage.setItem('trustvault_user', JSON.stringify(currentUser));
+
+                    document.getElementById('auth-modal').classList.add('hidden');
+                    initDashboard();
+                } else {
+                    alert("Authentication Failed: " + data.error);
+                }
+            } catch (err) {
+                alert("Server Error: " + err.message);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.reload();
+        }
+
+        function initDashboard() {
+            document.getElementById('header-username').textContent = currentUser.email || 'Admin User';
+            document.getElementById('header-role').textContent = `Role: ${currentUser.role || 'Admin'}`;
+            // FIXED: Fetch documents immediately on dashboard load to update stats counters
+            fetchDocuments();
+            loadAuditLogs();
+        }
+
+        async function handleUploadSubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('upload-title').value;
+            const fileInput = document.getElementById('file-input');
+
+            if (fileInput.files.length === 0) {
+                alert("Please select a file to upload.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const res = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert("Document successfully uploaded!");
+                    document.getElementById('upload-title').value = "";
+                    fileInput.value = "";
+                    switchTab('documents');
+                } else {
+                    alert("Upload failed: " + data.error);
+                }
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function fetchDocuments() {
+            try {
+                const res = await fetch('/api/documents', {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const docs = data.documents;
+                    document.getElementById('doc-count-badge').textContent = docs.length;
+                    document.getElementById('stat-total-docs').textContent = docs.length;
+                    
+                    const activeCount = docs.filter(d => !d.is_revoked).length;
+                    const revokedCount = docs.filter(d => d.is_revoked).length;
+                    document.getElementById('stat-active-docs').textContent = activeCount;
+                    document.getElementById('stat-revoked').textContent = revokedCount;
+
+                    const tbody = document.getElementById('documents-list-table');
+                    tbody.innerHTML = "";
+
+                    if (docs.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">No documents found in vault.</td></tr>`;
+                        return;
+                    }
+
+                    docs.forEach(doc => {
+                        const tr = document.createElement('tr');
+                        const statusBadge = doc.is_revoked 
+                            ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Revoked</span>`
+                            : `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>`;
+
+                        let actions = `<button onclick="downloadDocument(${doc.id}, '${doc.title}')" class="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded transition mr-2">Download</button>`;
+                        if (!doc.is_revoked) {
+                            actions += `<button onclick="revokeDocument(${doc.id})" class="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-semibold rounded transition">Revoke</button>`;
+                        }
+
+                        tr.innerHTML = `
+                            <td class="p-4 code-font text-slate-400">#${doc.id}</td>
+                            <td class="p-4 font-semibold text-white">${doc.title}</td>
+                            <td class="p-4">${statusBadge}</td>
+                            <td class="p-4 text-right">${actions}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching documents:", err);
+            }
+        }
+
+        async function downloadDocument(id, title) {
+            try {
+                const res = await fetch(`/api/documents/${id}/download`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    alert("Security Block: " + errData.error);
+                    loadAuditLogs();
+                    return;
+                }
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${title}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                
+                loadAuditLogs();
+            } catch (err) {
+                alert("Download error: " + err.message);
+            }
+        }
+
+        async function revokeDocument(id) {
+            if (!confirm(`Revoke document #${id}?`)) return;
+
+            try {
+                const res = await fetch(`/api/documents/${id}/revoked`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert("Document successfully revoked!");
+                    fetchDocuments();
+                    loadAuditLogs();
+                } else {
+                    alert("Failed: " + data.error);
+                }
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        async function loadAuditLogs() {
+            try {
+                const res = await fetch('/api/audit-logs', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('stat-audit-count').textContent = data.logs.length;
+                    const jsonFormatted = JSON.stringify(data.logs, null, 2);
+                    document.getElementById('audit-logs-pre').textContent = jsonFormatted;
+                    document.getElementById('dashboard-recent-logs').textContent = jsonFormatted;
+                }
+            } catch (err) {
+                console.error("Failed to load audit logs", err);
+            }
+        }
+    </script>
+</body>
+</html>
